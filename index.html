@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный Календарь 2026</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --panel-bg: #1a1a1e;
+            --border-color: #2d2d34;
+            --text-color: #e2e2e9;
+            --text-muted: #8a8a98;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            
+            --cat-work: #06b6d4;
+            --cat-personal: #f97316;
+            --cat-deadline: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Боковая панель (Форма и Список) */
+        .sidebar {
+            width: 360px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+        }
+
+        button.btn-add {
+            background-color: var(--primary);
+            border: none;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        button.btn-add:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .todo-section {
+            margin-top: 30px;
+            flex-grow: 1;
+        }
+
+        .todo-list {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .todo-item {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            font-size: 0.9rem;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .todo-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            max-width: 85%;
+        }
+
+        .todo-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .todo-text {
+            word-break: break-word;
+        }
+
+        .todo-del {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0 4px;
+            line-height: 1;
+        }
+
+        .todo-del:hover {
+            color: var(--cat-deadline);
+        }
+
+        /* Главная область календаря */
+        .calendar-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            height: 100%;
+        }
+
+        /* Навигация по месяцам */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .month-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-nav {
+            width: auto;
+            padding: 8px 16px;
+            cursor: pointer;
+            background-color: var(--panel-bg);
+            font-weight: 500;
+        }
+
+        .btn-nav:hover {
+            background-color: var(--border-color);
+        }
+
+        /* Сетка дней недели */
+        .weekdays-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        /* Основная сетка месяца */
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 6px;
+            flex-grow: 1;
+        }
+
+        .day-cell {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            min-height: 70px;
+        }
+
+        .day-cell:hover {
+            background-color: #222228;
+        }
+
+        .day-cell.active-select {
+            border-color: var(--primary);
+            background-color: #1e1e26;
+        }
+
+        .day-cell.other-month {
+            opacity: 0.3;
+            cursor: default;
+        }
+
+        .day-cell.other-month:hover {
+            background-color: var(--panel-bg);
+        }
+
+        .day-cell.today {
+            border: 2px solid var(--primary);
+        }
+
+        .day-number {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            align-self: flex-start;
+        }
+
+        .day-events {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow-y: auto;
+            flex-grow: 1;
+            max-height: calc(100% - 20px);
+        }
+
+        .event-badge {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Адаптивность для небольших экранов */
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column;
+                overflow: auto;
+                height: auto;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .calendar-main {
+                height: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- БОКОВАЯ ПАНЕЛЬ -->
+    <div class="sidebar">
+        <h2>Добавить событие</h2>
+        <div class="form-group">
+            <label for="event-date">Дата</label>
+            <input type="date" id="event-date">
+        </div>
+        <div class="form-group">
+            <label for="event-title">Название дела</label>
+            <input type="text" id="event-title" placeholder="Например: Встреча с клиентом">
+        </div>
+        <div class="form-group">
+            <label for="event-category">Категория</label>
+            <select id="event-category">
+                <option value="work">Работа / Проекты</option>
+                <option value="personal">Личные дела</option>
+                <option value="deadline">Важный дедлайн</option>
+            </select>
+        </div>
+        <button class="btn-add" id="btn-save">Добавить в календарь</button>
+
+        <!-- СПИСОК ЗАДАЧ (TO-DO LIST) -->
+        <div class="todo-section">
+            <h2>Список всех дел</h2>
+            <ul class="todo-list" id="todo-list">
+                <!-- Сюда динамически добавляются задачи -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- ОСНОВНОЙ КАЛЕНДАРЬ -->
+    <div class="calendar-main">
+        <div class="calendar-header">
+            <div class="month-title" id="month-year-title">Октябрь 2026</div>
+            <div class="nav-buttons">
+                <button class="btn-nav" id="btn-prev">Предыдущий</button>
+                <button class="btn-nav" id="btn-next">Следующий</button>
+            </div>
+        </div>
+
+        <div class="weekdays-grid">
+            <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+        </div>
+
+        <div class="days-grid" id="days-container">
+            <!-- Сюда генерируются ячейки дней -->
+        </div>
+    </div>
+
+    <script>
+        // Данные приложения
+        let currentYear = 2026;
+        let currentMonth = 9; // Октябрь (индекс 9, так как Январь = 0)
+        
+        // База данных событий (ключ: "YYYY-MM-DD")
+        let eventsData = {
+            "2026-10-05": [{ id: 1, title: "Запуск нового спринта", category: "work" }],
+            "2026-10-14": [{ id: 2, title: "День рождения мамы", category: "personal" }],
+            "2026-10-23": [{ id: 3, title: "Сдача квартального отчета", category: "deadline" }]
+        };
+
+        const monthNames = [
+            "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+            "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+        ];
+
+        const categoryColors = {
+            work: "var(--cat-work)",
+            personal: "var(--cat-personal)",
+            deadline: "var(--cat-deadline)"
+        };
+
+        // DOM элементы
+        const monthTitle = document.getElementById('month-year-title');
+        const daysContainer = document.getElementById('days-container');
+        const eventDateInput = document.getElementById('event-date');
+        const eventTitleInput = document.getElementById('event-title');
+        const eventCategorySelect = document.getElementById('event-category');
+        const btnSave = document.getElementById('btn-save');
+        const todoList = document.getElementById('todo-list');
+
+        // Инициализация
+        function initCalendar() {
+            renderCalendar();
+            renderTodoList();
+            
+            // Навигация
+            document.getElementById('btn-prev').addEventListener('click', () => changeMonth(-1));
+            document.getElementById('btn-next').addEventListener('click', () => changeMonth(1));
+            
+            // Сохранение
+            btnSave.addEventListener('click', addEvent);
+        }
+
+        // Переключение месяцев
+        function changeMonth(direction) {
+            currentMonth += direction;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            } else if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        }
+
+        // Рендеринг сетки календаря
+        function renderCalendar() {
+            daysContainer.innerHTML = '';
+            monthTitle.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+            // Первый день месяца (0 = Вс, 1 = Пн, ... 6 = Сб)
+            let firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+            // Переводим на европейский стандарт (0 = Пн, ... 6 = Вс)
+            let startDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+
+            // Количество дней в текущем месяце
+            let totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+            // Количество дней в предыдущем месяце
+            let prevTotalDays = new Date(currentYear, currentMonth, 0).getDate();
+
+            // Сегодняшняя дата для подсветки
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            // 1. Заполняем остатки предыдущего месяца
+            for (let i = startDay; i > 0; i--) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'day-cell other-month';
+                dayDiv.innerHTML = `<span class="day-number">${prevTotalDays - i + 1}</span>`;
+                daysContainer.appendChild(dayDiv);
+            }
+
+            // 2. Заполняем дни текущего месяца
+            for (let day = 1; day <= totalDays; day++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'day-cell';
+                
+                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                if (dateStr === todayStr) {
+                    dayDiv.classList.add('today');
+                }
+
+                dayDiv.innerHTML = `<span class="day-number">${day}</span><div class="day-events"></div>`;
+                
+                // Обработчик клика для выбора даты в форму
+                dayDiv.addEventListener('click', () => {
+                    document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('active-select'));
+                    dayDiv.classList.add('active-select');
+                    eventDateInput.value = dateStr;
+                });
+
+                // Выводим события дня
+                const eventsContainer = dayDiv.querySelector('.day-events');
+                if (eventsData[dateStr]) {
+                    eventsData[dateStr].forEach(ev => {
+                        const badge = document.createElement('div');
+                        badge.className = 'event-badge';
+                        badge.style.backgroundColor = categoryColors[ev.category];
+                        badge.textContent = ev.title;
+                        badge.title = ev.title;
+                        eventsContainer.appendChild(badge);
+                    });
+                }
+
+                daysContainer.appendChild(dayDiv);
+            }
+
+            // 3. Заполняем пустые ячейки в конце до полной сетки (6 недель * 7 дней = 42 ячейки)
+            let remainingCells = 42 - (startDay + totalDays);
+            for (let i = 1; i <= remainingCells; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'day-cell other-month';
+                dayDiv.innerHTML = `<span class="day-number">${i}</span>`;
+                daysContainer.appendChild(dayDiv);
+            }
+        }
+
+        // Рендеринг бокового списка дел
+        function renderTodoList() {
+            todoList.innerHTML = '';
+            
+            // Собираем все события в плоский отсортированный массив
+            let allEvents = [];
+            for (let date in eventsData) {
+                eventsData[date].forEach(ev => {
+                    allEvents.push({ date, ...ev });
+                });
+            }
+            
+            // Сортируем хронологически
+            allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (allEvents.length === 0) {
+                todoList.innerHTML = '<li style="color: var(--text-muted); font-size: 0.9rem;">Список задач пуст</li>';
+                return;
+            }
+
+            allEvents.forEach(ev => {
+                const li = document.createElement('li');
+                li.className = 'todo-item';
+                li.style.borderLeft = `4px solid ${categoryColors[ev.category]}`;
+                
+                // Форматируем дату для вывода (ДД.ММ.ГГГГ)
+                const [y, m, d] = ev.date.split('-');
+                const formattedDate = `${d}.${m}.${y}`;
+
+                li.innerHTML = `
+                    <div class="todo-info">
+                        <span class="todo-date">${formattedDate}</span>
+                        <span class="todo-text">${ev.title}</span>
+                    </div>
+                    <button class="todo-del" onclick="deleteEvent('${ev.date}', ${ev.id})">×</button>
+                `;
+                todoList.appendChild(li);
+            });
+        }
+
+        // Добавление нового события
+        function addEvent() {
+            const dateVal = eventDateInput.value;
+            const titleVal = eventTitleInput.value.trim();
+            const categoryVal = eventCategorySelect.value;
+
+            if (!dateVal || !titleVal) {
+                alert("Пожалуйста, заполните дату и название дела.");
+                return;
+            }
+
+            if (!eventsData[dateVal]) {
+                eventsData[dateVal] = [];
+            }
+
+            const newEvent = {
+                id: Date.now(),
+                title: titleVal,
+                category: categoryVal
+            };
+
+            eventsData[dateVal].push(newEvent);
+            
+            // Очищаем поле ввода текста
+            eventTitleInput.value = '';
+
+            // Обновляем интерфейс
+            renderCalendar();
+            renderTodoList();
+        }
+
+        // Удаление события
+        window.deleteEvent = function(date, id) {
+            if (eventsData[date]) {
+                eventsData[date] = eventsData[date].filter(ev => ev.id !== id);
+                if (eventsData[date].length === 0) {
+                    delete eventsData[date];
+                }
+                renderCalendar();
+                renderTodoList();
+            }
+        };
+
+        // Запуск при загрузке страницы
+        window.onload = initCalendar;
+    </script>
+</body>
+</html>
